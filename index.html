@@ -76,6 +76,12 @@
   .match-line{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--pitch-dark);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-weight:700;font-size:14px;}
   .match-line .sc{color:var(--gold);font-weight:800;}
   .match-line .sc.pend{color:var(--amber-ok);}
+
+  table.points-tbl{border-collapse:collapse;width:100%;font-size:14px;}
+  table.points-tbl th,table.points-tbl td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;}
+  table.points-tbl thead th{color:var(--gold);font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+  table.points-tbl td.p,table.points-tbl th:last-child{text-align:right;font-weight:800;color:var(--gold);}
+
 </style>
 </head>
 <body>
@@ -114,6 +120,20 @@
   </div>
 
   <div class="box">
+    <h2>¿Cómo se ganan los puntos?</h2>
+    <table class="points-tbl">
+      <thead><tr><th>Criterio</th><th>Puntos</th></tr></thead>
+      <tbody>
+        <tr><td>🎯 Marcador exacto</td><td class="p">4</td></tr>
+        <tr><td>✅ Acertar ganador o empate</td><td class="p">2</td></tr>
+        <tr><td>🎽 Acertar los goles de un equipo</td><td class="p">1</td></tr>
+        <tr><td>⬜ Fallar</td><td class="p">0</td></tr>
+      </tbody>
+    </table>
+    <div class="note">Los criterios se suman entre sí (excepto el marcador exacto, que ya vale 4). Ej.: real 3-0 y predijiste 3-1 → 2 (ganador) + 1 (goles de un equipo) = 3 pts.</div>
+  </div>
+
+  <div class="box">
     <h2>Ranking general</h2>
     <div id="rankArea"><div class="empty">Cargando…</div></div>
   </div>
@@ -127,6 +147,7 @@
     <h2>Partidos</h2>
     <div id="matchArea"><div class="empty">Cargando…</div></div>
   </div>
+
 </div>
 
 <script>
@@ -226,7 +247,7 @@ function totalFor(name){
 }
 function tally(){
   return state.people.map(p=>{const t=totalFor(p);return {name:p,pts:t.pts,exact:t.exact};})
-    .sort((a,b)=>b.pts-a.pts||b.exact-a.exact);
+    .sort((a,b)=>b.pts-a.pts||a.name.localeCompare(b.name,"es",{sensitivity:"base"}));
 }
 function anyReal(){ return state.matches.some(m=>m.real&&m.real.h!=null&&m.real.a!=null); }
 
@@ -247,9 +268,8 @@ function buildPrizeRows(){
   const t=tally(), has=anyReal();
   let html=`<div class="pot-line">🏦 Pozo total: <b style="color:var(--gold)">${formatCOP(state.pot)}</b></div>`;
   for(let i=0;i<3;i++){
-    const who=(has && t[i] && t[i].pts>0) ? t[i].name : "Por definir";
     html+=`<div class="prize-row${i===0?" first":""}"><span class="m">${medals[i]}</span>`+
-      `<div style="flex:1;"><div class="lbl">${labels[i]}</div><div class="who">${who}</div></div>`+
+      `<div style="flex:1;"><div class="lbl">${labels[i]}</div></div>`+
       `<span class="amt">${formatCOP(amt[i])}</span></div>`;
   }
   return html;
@@ -269,11 +289,21 @@ function renderRank(){
     html+=`</div>`;
   }
   html+='<ul class="rank">';
-  t.forEach((x,idx)=>{
-    const medal=has?(idx===0?"🥇":idx===1?"🥈":idx===2?"🥉":(idx+1)):"•";
-    html+=`<li class="${has&&idx===0&&x.pts===top&&top>0?"first":""}">
-      <div class="pos">${medal}</div><div class="nm">${x.name}</div>
-      <div class="pts">${x.pts}<small> pts</small></div></li>`;
+  // Agrupa por puntaje: los empatados comparten una sola fila/medalla.
+  const groups=[];
+  t.forEach(x=>{
+    const g=groups.find(gr=>gr.pts===x.pts);
+    if(g) g.names.push(x.name);
+    else groups.push({pts:x.pts, names:[x.name]});
+  });
+  groups.forEach(g=>{
+    const rank=t.filter(y=>y.pts>g.pts).length+1; // posición del grupo
+    const medal=has?(rank===1?"🥇":rank===2?"🥈":rank===3?"🥉":rank):"•";
+    const names=g.names.join(" · ");
+    const isFirst=has&&rank===1&&g.pts===top&&top>0;
+    html+=`<li class="${isFirst?"first":""}">
+      <div class="pos">${medal}</div><div class="nm">${names}</div>
+      <div class="pts">${g.pts}<small> pts</small></div></li>`;
   });
   html+="</ul>";
   area.innerHTML=html;
@@ -295,7 +325,8 @@ function renderSummary(){
   });
   head+=`<th class="total">Total</th></tr>`;
   let body="";
-  state.people.forEach(p=>{
+  t.forEach(row=>{
+    const p=row.name;
     const tot=totalFor(p);
     const lead=top>0&&tot.pts===top?" lead":"";
     body+=`<tr class="${lead.trim()}"><td class="name">${p}</td>`;
@@ -305,7 +336,7 @@ function renderSummary(){
       const mk=has?`${pr.h}-${pr.a}`:"—";
       const hasR=m.real&&m.real.h!=null&&m.real.a!=null;
       const pt=pointsFor(pr,m.real);
-      const cls=hasR?(pt===3?"hit3":pt===1?"hit1":""):"";
+      const cls=hasR?(pt>=3?"hit3":pt>0?"hit1":""):"";
       const ptTxt=hasR?`<span class="pt">${pt} pt${pt===1?"":"s"}</span>`:"";
       body+=`<td class="${cls}"><span class="pred">${mk}</span>${ptTxt}</td>`;
     });
