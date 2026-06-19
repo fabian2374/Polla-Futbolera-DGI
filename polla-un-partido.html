@@ -138,6 +138,13 @@
   </div>
 
   <div class="box">
+    <h2>📅 Partidos del Mundial · esta semana</h2>
+    <div class="note" style="margin-top:0;">Elige de aquí los partidos del Mundial (lunes a domingo, hora de Colombia) sobre los que se hará la polla.</div>
+    <div id="weekArea" style="margin-top:10px;"><div class="empty">Cargando…</div></div>
+    <button class="btn-ghost btn-sm" style="width:100%;margin-top:8px;" onclick="loadWeekMatches()">🔄 Recargar partidos de la semana</button>
+  </div>
+
+  <div class="box">
     <h2>Partidos</h2>
     <div id="matchList"></div>
     <button class="btn-ghost" style="width:100%;margin-top:6px;" onclick="addMatch()">+ Agregar partido</button>
@@ -171,7 +178,7 @@
     <h2>Predicciones</h2>
     <div class="tabs" id="predTabs"></div>
     <div id="predArea"></div>
-    <div class="note">🎯 Marcador exacto = 4 pts · ✅ acertar ganador/empate = 2 pts · 🎽 acertar los goles de un equipo = 1 pt (se suman) · ⬜ fallar = 0</div>
+    <div class="note">🎯 Marcador exacto = 3 pts · ✅ acertar el ganador/empate (sin importar el marcador) = 1 pt · ⬜ fallar = 0</div>
   </div>
 
   <div class="box">
@@ -210,12 +217,12 @@ const STORAGE_KEY="polla-dgi-v2";
    CONFIGURACIÓN DE LA NUBE (JSONBin.io)
    Ya NO hace falta editar el código: usa las casillas de la página.
    ======================================================================== */
-const CLOUD = { BIN_ID:"", MASTER_KEY:"", ACCESS_KEY:"" };
+const CLOUD = { BIN_ID:"6a3167f5da38895dfeca5264", MASTER_KEY:"$2a$10$W0Xel91oTNA221naHM5kZOWTjFRYfAwuZEpxdIYHjxhN8MgUC0Hbm", ACCESS_KEY:"$2a$10$Gien/45/avsjP.hKkLl3N.7ii.SIpIJv2Qian83OlKR2vQX.UE.ZS" };
 const CLOUD_KEY = "polla-dgi-cloud";
 function cloudReady(){ return !!(CLOUD.BIN_ID && CLOUD.MASTER_KEY); }
 function loadCloudConfig(){
   try{ const c=JSON.parse(localStorage.getItem(CLOUD_KEY)||"{}");
-    CLOUD.BIN_ID=c.BIN_ID||""; CLOUD.MASTER_KEY=c.MASTER_KEY||""; CLOUD.ACCESS_KEY=c.ACCESS_KEY||"";
+    CLOUD.BIN_ID=c.BIN_ID||CLOUD.BIN_ID; CLOUD.MASTER_KEY=c.MASTER_KEY||CLOUD.MASTER_KEY; CLOUD.ACCESS_KEY=c.ACCESS_KEY||CLOUD.ACCESS_KEY;
   }catch(e){}
 }
 function fillCloudFields(){
@@ -276,6 +283,23 @@ async function publish(){
   }catch(e){ setCloudStatus("error"); }
   finally{ publishing=false; }
 }
+async function pullFromCloud(){
+  if(!cloudReady())return;
+  try{
+    const r=await fetch(`https://api.jsonbin.io/v3/b/${CLOUD.BIN_ID}/latest`,{
+      headers:{"X-Master-Key":CLOUD.MASTER_KEY,"X-Bin-Meta":"false"}
+    });
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const data=await r.json();
+    const cloud=(data&&data.record)?data.record:data;
+    if(cloud&&typeof cloud==="object"&&((cloud.matches&&cloud.matches.length)||(cloud.people&&cloud.people.length))){
+      state=Object.assign(state, cloud);
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+      initUI();
+      setCloudStatus("idle");
+    }
+  }catch(e){}
+}
 function setCloudStatus(s){
   const el=document.getElementById("cloudStatus");
   if(!el)return;
@@ -299,12 +323,16 @@ function copyViewerNote(){
 }
 
 // ---- partidos ----
-function addMatch(){
-  const m={id:uid(), home:"Colombia", away:"Portugal", real:{h:null,a:null}};
+function addMatch(home,away){
+  const m={id:uid(), home:home||"Colombia", away:away||"Portugal", real:{h:null,a:null}};
   state.matches.push(m);
   if(!state.activeMatch) state.activeMatch=m.id;
   state.people.forEach(p=>{ if(!state.predictions[p]) state.predictions[p]={}; state.predictions[p][m.id]={h:undefined,a:undefined}; });
   save(); renderMatches(); renderPredTabs(); renderPred(); renderRank();
+  return m.id;
+}
+function hasMatch(home,away){
+  return state.matches.some(m=>(m.home===home&&m.away===away)||(m.home===away&&m.away===home));
 }
 function removeMatch(id){
   state.matches=state.matches.filter(m=>m.id!==id);
@@ -469,12 +497,10 @@ function renderPred(){
 function pointsFor(pred,real){
   if(!pred||pred.h==null||pred.a==null)return 0;
   if(real.h==null||real.a==null)return 0;
-  if(pred.h===real.h&&pred.a===real.a)return 4;          // marcador exacto
-  let pts=0;
+  if(pred.h===real.h&&pred.a===real.a)return 3;          // marcador exacto
   const sign=(x,y)=>x>y?1:x<y?-1:0;
-  if(sign(pred.h,pred.a)===sign(real.h,real.a)) pts+=2;   // acierta ganador/empate
-  if(pred.h===real.h||pred.a===real.a) pts+=1;            // acierta los goles de un equipo
-  return pts;
+  if(sign(pred.h,pred.a)===sign(real.h,real.a)) return 1; // acierta ganador/empate (sin importar marcador)
+  return 0;
 }
 function totalFor(name){
   let pts=0,exact=0;
@@ -802,6 +828,68 @@ function importExcel(input){
   reader.readAsArrayBuffer(file);
 }
 
+// ---- partidos de la semana (Mundial) para escoger ----
+let weekData=null;
+function wcMatchDate(m){
+  if(!m.date)return null;
+  let hh=12,mm=0,off=0;
+  const t=(m.time||"").match(/(\d{1,2}):(\d{2})\s*UTC\s*([+-]\d{1,2})?/i);
+  if(t){ hh=+t[1]; mm=+t[2]; off=t[3]?+t[3]:0; }
+  const d=new Date(m.date+"T00:00:00Z");
+  d.setUTCHours(hh-off, mm, 0, 0);
+  return d;
+}
+function fmtCoDay(d){ const s=d.toLocaleDateString("es-CO",{weekday:"short",day:"2-digit",month:"short",timeZone:"America/Bogota"}); return s.charAt(0).toUpperCase()+s.slice(1); }
+function fmtCoTime(d){ return d.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit",hour12:true,timeZone:"America/Bogota"}); }
+async function loadWeekMatches(){
+  const area=document.getElementById("weekArea");
+  if(area && !weekData) area.innerHTML='<div class="empty">Cargando…</div>';
+  try{
+    if(!weekData){
+      const r=await fetch(OFFICIAL_URL,{cache:"no-store"});
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      weekData=await r.json();
+    }
+    renderWeek();
+  }catch(e){
+    if(area) area.innerHTML='<div class="empty">No se pudieron cargar los partidos (revisa tu internet).</div>';
+  }
+}
+function renderWeek(){
+  const area=document.getElementById("weekArea");
+  if(!weekData||!weekData.matches){ return; }
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dow=(today.getDay()+6)%7;
+  const monday=new Date(today); monday.setDate(today.getDate()-dow);
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6); sunday.setHours(23,59,59,999);
+  const up=weekData.matches.map(m=>({m,d:wcMatchDate(m)})).filter(o=>{
+    if(!o.d)return false;
+    const played=o.m.score&&o.m.score.ft&&o.m.score.ft.length>=2;
+    return o.d>=monday&&o.d<=sunday&&!played;
+  }).sort((a,b)=>a.d-b.d);
+  if(!up.length){ area.innerHTML='<div class="empty">No hay partidos pendientes esta semana.</div>'; return; }
+  area.innerHTML="";
+  up.forEach(({m,d})=>{
+    const e1=resolveTeam(m.team1), e2=resolveTeam(m.team2);
+    const f1=FLAG[e1]||"🏳️", f2=FLAG[e2]||"🏳️";
+    const added=hasMatch(e1,e2);
+    const row=document.createElement("div");
+    row.className="match-card";
+    row.style.padding="10px 12px";
+    row.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:14px;">${f1} ${e1} <span style="opacity:.5;">vs</span> ${e2} ${f2}</div>
+          <div style="font-size:11px;color:var(--amber-ok);margin-top:3px;">${fmtCoDay(d)} · ${fmtCoTime(d)}</div>
+        </div>
+        <button class="${added?"btn-ghost":"btn-gold"} btn-sm add-week" ${added?"disabled style=\"opacity:.5;\"":""}>${added?"✓ Agregado":"+ Agregar"}</button>
+      </div>`;
+    const btn=row.querySelector(".add-week");
+    if(!added){ btn.onclick=()=>{ addMatch(e1,e2); renderWeek(); }; }
+    area.appendChild(row);
+  });
+}
+
 // ---- init ----
 function initUI(){
   prizeEl.value=state.prize||"";
@@ -817,6 +905,8 @@ fillCloudFields();
 setCloudStatus(cloudReady()?"idle":"off");
 fetchOfficialResults(true);
 setInterval(()=>fetchOfficialResults(true), 300000);
+loadWeekMatches();
+pullFromCloud();
 </script>
 </body>
 </html>
