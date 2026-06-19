@@ -904,7 +904,7 @@ initUI();
 fillCloudFields();
 setCloudStatus(cloudReady()?"idle":"off");
 fetchOfficialResults(true);
-setInterval(()=>fetchOfficialResults(true), 300000);
+setInterval(()=>fetchOfficialResults(true), 20000);
 loadWeekMatches();
 pullFromCloud();
 </script>
