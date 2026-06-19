@@ -124,13 +124,12 @@
     <table class="points-tbl">
       <thead><tr><th>Criterio</th><th>Puntos</th></tr></thead>
       <tbody>
-        <tr><td>🎯 Marcador exacto</td><td class="p">4</td></tr>
-        <tr><td>✅ Acertar ganador o empate</td><td class="p">2</td></tr>
-        <tr><td>🎽 Acertar los goles de un equipo</td><td class="p">1</td></tr>
+        <tr><td>🎯 Marcador exacto</td><td class="p">3</td></tr>
+        <tr><td>✅ Acertar el ganador o empate (sin importar el marcador)</td><td class="p">1</td></tr>
         <tr><td>⬜ Fallar</td><td class="p">0</td></tr>
       </tbody>
     </table>
-    <div class="note">Los criterios se suman entre sí (excepto el marcador exacto, que ya vale 4). Ej.: real 3-0 y predijiste 3-1 → 2 (ganador) + 1 (goles de un equipo) = 3 pts.</div>
+    <div class="note">Marcador exacto = 3 pts. Si no aciertas el marcador exacto pero sí el ganador o el empate, ganas 1 pt. Ej.: real 3-0 y predijiste 2-0 → 1 pt (acertaste el ganador).</div>
   </div>
 
   <div class="box">
@@ -230,12 +229,10 @@ function formatCOP(n){ return "$ "+Math.round(n||0).toLocaleString("es-CO"); }
 function pointsFor(pred,real){
   if(!pred||pred.h==null||pred.a==null)return 0;
   if(!real||real.h==null||real.a==null)return 0;
-  if(pred.h===real.h&&pred.a===real.a)return 4;          // marcador exacto
-  let pts=0;
+  if(pred.h===real.h&&pred.a===real.a)return 3;          // marcador exacto
   const sign=(x,y)=>x>y?1:x<y?-1:0;
-  if(sign(pred.h,pred.a)===sign(real.h,real.a)) pts+=2;   // acierta ganador/empate
-  if(pred.h===real.h||pred.a===real.a) pts+=1;            // acierta los goles de un equipo
-  return pts;
+  if(sign(pred.h,pred.a)===sign(real.h,real.a)) return 1; // acierta ganador/empate (sin importar marcador)
+  return 0;
 }
 function totalFor(name){
   let pts=0,exact=0;
