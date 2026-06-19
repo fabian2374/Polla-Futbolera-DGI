@@ -404,7 +404,7 @@ function renderPotDisplay(){
   const d=document.getElementById("potDisplay");
   if(state.pot>0){
     d.innerHTML=`🏦 Pozo: <b>${formatCOP(state.pot)}</b><br>`+
-      `🥇 70%: <b>${formatCOP(state.pot*0.7)}</b> · 🥈 20%: <b>${formatCOP(state.pot*0.2)}</b> · 🥉 10%: <b>${formatCOP(state.pot*0.1)}</b>`;
+      `🥇 70%: <b>${formatCOP(state.pot*0.7)}</b> · 🥈 30%: <b>${formatCOP(state.pot*0.3)}</b>`;
   }else d.innerHTML="";
 }
 potEl.addEventListener("input",()=>{
