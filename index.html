@@ -73,6 +73,9 @@
   .winner-banner .big{font-size:20px;display:block;margin-top:4px;}
   .note{font-size:12px;opacity:.7;margin-top:10px;line-height:1.5;}
   .empty{opacity:.6;text-align:center;padding:24px 10px;font-size:14px;}
+  .live-tag{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#fff;background:#d12d2d;border-radius:5px;padding:2px 7px;vertical-align:middle;animation:livepulse 1.4s ease-in-out infinite;}
+  .live-tag.pause{background:#c87a00;animation:none;}
+  @keyframes livepulse{0%,100%{opacity:1;}50%{opacity:.45;}}
   .match-line{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--pitch-dark);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-weight:700;font-size:14px;}
   .match-line .sc{color:var(--gold);font-weight:800;}
   .match-line .sc.pend{color:var(--amber-ok);}
@@ -165,6 +168,64 @@ const TEAMS=[
  ["Túnez","🇹🇳"],["Turquía","🇹🇷"],["Uruguay","🇺🇾"],["Uzbekistán","🇺🇿"]
 ];
 const FLAG=Object.fromEntries(TEAMS);
+
+// ---- marcador EN VIVO (proxy propio a football-data.org) ----
+const LIVE_URL="https://polla-marcador.fabian2374.workers.dev";
+const TEAM_ALIAS={
+ "Alemania":["germany"],"Arabia Saudita":["saudi arabia"],"Argelia":["algeria"],
+ "Argentina":["argentina"],"Australia":["australia"],"Austria":["austria"],
+ "Bélgica":["belgium"],"Bosnia":["bosnia and herzegovina","bosnia","bosnia herzegovina"],
+ "Brasil":["brazil"],"Cabo Verde":["cape verde","cabo verde","cape verde islands"],"Canadá":["canada"],
+ "Colombia":["colombia"],"Corea del Sur":["south korea","korea republic","korea republic of"],
+ "Costa de Marfil":["ivory coast","cote divoire","cote d ivoire"],"Croacia":["croatia"],
+ "Curazao":["curacao"],"Ecuador":["ecuador"],"Egipto":["egypt"],"Escocia":["scotland"],
+ "España":["spain"],"Estados Unidos":["united states","usa","united states of america"],
+ "Francia":["france"],"Ghana":["ghana"],"Haití":["haiti"],"Inglaterra":["england"],
+ "Irak":["iraq"],"Irán":["iran","ir iran"],"Japón":["japan"],"Jordania":["jordan"],
+ "Marruecos":["morocco"],"México":["mexico"],"Noruega":["norway"],"Nueva Zelanda":["new zealand"],
+ "Países Bajos":["netherlands","holland"],"Panamá":["panama"],"Paraguay":["paraguay"],
+ "Portugal":["portugal"],"Qatar":["qatar"],
+ "RD Congo":["dr congo","congo dr","democratic republic of the congo","congo democratic republic"],
+ "Rep. Checa":["czech republic","czechia"],"Senegal":["senegal"],"Sudáfrica":["south africa"],
+ "Suecia":["sweden"],"Suiza":["switzerland"],"Túnez":["tunisia"],
+ "Turquía":["turkey","turkiye"],"Uruguay":["uruguay"],"Uzbekistán":["uzbekistan"]
+};
+function normName(s){ return (s||"").toString().toLowerCase()
+  .normalize("NFD").replace(/[̀-ͯ]/g,"")
+  .replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim(); }
+function teamMatch(esName, offName){
+  const al=(TEAM_ALIAS[esName]||[esName]).map(normName);
+  return al.includes(normName(offName));
+}
+async function applyLiveScores(){
+  if(!state.matches||!state.matches.length)return;
+  try{
+    const r=await fetch(LIVE_URL,{cache:"no-store"});
+    if(!r.ok)return;
+    const off=(await r.json()).matches||[];
+    state.matches.forEach(m=>{
+      let found=null, swap=false;
+      for(const o of off){
+        if(o.status==="SCHEDULED"||o.status==="TIMED")continue;
+        const ft=o.score&&o.score.fullTime;
+        if(!ft||ft.home==null||ft.away==null)continue;
+        const hn=o.homeTeam&&o.homeTeam.name, an=o.awayTeam&&o.awayTeam.name;
+        if(teamMatch(m.home,hn)&&teamMatch(m.away,an)){found=o;swap=false;break;}
+        if(teamMatch(m.home,an)&&teamMatch(m.away,hn)){found=o;swap=true;break;}
+      }
+      if(found){
+        const ft=found.score.fullTime;
+        m.real=m.real||{};
+        m.real.h=swap?ft.away:ft.home;
+        m.real.a=swap?ft.home:ft.away;
+        const inPlay=(found.status==="IN_PLAY"||found.status==="PAUSED");
+        m.real.partial=inPlay;
+        m.real.paused=(found.status==="PAUSED");
+        m.real.min=inPlay?(found.minute??null):null;
+      }
+    });
+  }catch(e){}
+}
 
 /* ========================================================================
    CONFIGURACIÓN — usa las casillas (⚙️) o abre un enlace con la conexión.
@@ -349,7 +410,8 @@ function renderMatches(){
     const fh=FLAG[m.home]||"🏳️",fa=FLAG[m.away]||"🏳️";
     const hasR=m.real&&m.real.h!=null&&m.real.a!=null;
     const sc=hasR?`<span class="sc">${m.real.h} - ${m.real.a}</span>`:`<span class="sc pend">vs</span>`;
-    html+=`<div class="match-line">${fh} ${m.home} ${sc} ${m.away} ${fa}</div>`;
+    const tag=(hasR&&m.real.partial)?(m.real.paused?`<span class="live-tag pause">🟠 medio tiempo</span>`:`<span class="live-tag">🔴 EN VIVO${m.real.min!=null?" "+m.real.min+"'":""}</span>`):"";
+    html+=`<div class="match-line">${fh} ${m.home} ${sc} ${m.away} ${fa}${tag}</div>`;
   });
   area.innerHTML=html;
 }
@@ -372,6 +434,7 @@ async function refresh(){
     const rec=data.record||data;
     state={ prize:rec.prize||"", pot:rec.pot||0, matches:rec.matches||[], people:rec.people||[],
             predictions:rec.predictions||{}, updatedAt:rec.updatedAt||null };
+    await applyLiveScores();   // superpone marcador en vivo/final desde football-data
     render();
     const now=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
     setStat("Actualizado "+now,"");

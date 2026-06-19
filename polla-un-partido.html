@@ -371,7 +371,7 @@ function renderMatches(){
         <input class="score big" type="number" min="0" max="99" inputmode="numeric" placeholder="–" data-id="${m.id}" data-r="h" value="${m.real.h??""}">
         <div class="vs">:</div>
         <input class="score big" type="number" min="0" max="99" inputmode="numeric" placeholder="–" data-id="${m.id}" data-r="a" value="${m.real.a??""}">
-        <span class="lab r">final</span>
+        <span class="lab r">${m.real.partial?(m.real.paused?"🟠 medio tiempo":"🔴 EN VIVO"+(m.real.min!=null?" "+m.real.min+"'":"")):"final"}</span>
       </div>`;
     card.querySelector(".del").onclick=()=>removeMatch(m.id);
     box.appendChild(card);
@@ -624,13 +624,16 @@ function resetAll(){
   initUI();
 }
 
-// ---- resultados oficiales (datos abiertos, sin clave) ----
+// ---- resultados oficiales ----
+// Calendario (datos abiertos, sin clave):
 const OFFICIAL_URL="https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
+// Marcador EN VIVO (proxy propio a football-data.org):
+const LIVE_URL="https://polla-marcador.fabian2374.workers.dev";
 const TEAM_ALIAS={
  "Alemania":["germany"],"Arabia Saudita":["saudi arabia"],"Argelia":["algeria"],
  "Argentina":["argentina"],"Australia":["australia"],"Austria":["austria"],
  "Bélgica":["belgium"],"Bosnia":["bosnia and herzegovina","bosnia","bosnia herzegovina"],
- "Brasil":["brazil"],"Cabo Verde":["cape verde","cabo verde"],"Canadá":["canada"],
+ "Brasil":["brazil"],"Cabo Verde":["cape verde","cabo verde","cape verde islands"],"Canadá":["canada"],
  "Colombia":["colombia"],"Corea del Sur":["south korea","korea republic","korea republic of"],
  "Costa de Marfil":["ivory coast","cote divoire","cote d ivoire"],"Croacia":["croatia"],
  "Curazao":["curacao"],"Ecuador":["ecuador"],"Egipto":["egypt"],"Escocia":["scotland"],
@@ -657,32 +660,45 @@ async function fetchOfficialResults(silent){
   if(!state.matches.length){ if(!silent)alert("Agrega partidos primero."); return; }
   if(st){ st.textContent="⏳ Buscando resultados oficiales…"; st.style.color="#ffb547"; }
   try{
-    const r=await fetch(OFFICIAL_URL,{cache:"no-store"});
+    const r=await fetch(LIVE_URL,{cache:"no-store"});
     if(!r.ok)throw new Error("HTTP "+r.status);
     const data=await r.json();
     const off=data.matches||[];
-    let updated=0; const notfound=[];
+    let updated=0, live=0; const notfound=[];
     state.matches.forEach(m=>{
       let found=null, swap=false;
       for(const o of off){
-        const ft=o.score&&o.score.ft;
-        if(!ft||ft.length<2)continue;
-        if(teamMatch(m.home,o.team1)&&teamMatch(m.away,o.team2)){found=o;swap=false;break;}
-        if(teamMatch(m.home,o.team2)&&teamMatch(m.away,o.team1)){found=o;swap=true;break;}
+        const hn=o.homeTeam&&o.homeTeam.name, an=o.awayTeam&&o.awayTeam.name;
+        const st=o.status;
+        if(st==="SCHEDULED"||st==="TIMED")continue;           // aún no empieza
+        const ft=o.score&&o.score.fullTime;
+        if(!ft||ft.home==null||ft.away==null)continue;
+        if(teamMatch(m.home,hn)&&teamMatch(m.away,an)){found=o;swap=false;break;}
+        if(teamMatch(m.home,an)&&teamMatch(m.away,hn)){found=o;swap=true;break;}
       }
       if(found){
-        const ft=found.score.ft;
-        m.real.h=swap?ft[1]:ft[0];
-        m.real.a=swap?ft[0]:ft[1];
+        const ft=found.score.fullTime;
+        m.real.h=swap?ft.away:ft.home;
+        m.real.a=swap?ft.home:ft.away;
+        const inPlay=(found.status==="IN_PLAY"||found.status==="PAUSED");
+        m.real.partial=inPlay;                               // true = marcador en vivo, aún no final
+        m.real.min=inPlay?(found.minute??null):null;         // minuto del partido
+        m.real.paused=(found.status==="PAUSED");             // medio tiempo
+        if(inPlay)live++;
         updated++;
       }else notfound.push(`${m.home} vs ${m.away}`);
     });
     save(); renderMatches(); renderPred(); renderRank();
     const now=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
-    if(st){ st.textContent=`✓ ${updated} de ${state.matches.length} con resultado oficial · ${now}`; st.style.color="#37d67a"; }
+    if(st){
+      const liveTxt=live?` · 🔴 ${live} en vivo`:"";
+      st.textContent=`✓ ${updated} de ${state.matches.length} con marcador${liveTxt} · ${now}`;
+      st.style.color="#37d67a";
+    }
     if(!silent){
-      let msg=`Actualizados ${updated} de ${state.matches.length} partidos con el resultado oficial.`;
-      if(notfound.length) msg+="\n\nSin resultado oficial todavía (o no son del Mundial):\n• "+notfound.join("\n• ");
+      let msg=`Actualizados ${updated} de ${state.matches.length} partidos.`;
+      if(live) msg+=`\n🔴 ${live} en vivo en este momento.`;
+      if(notfound.length) msg+="\n\nSin marcador todavía (o no son del Mundial):\n• "+notfound.join("\n• ");
       alert(msg);
     }
   }catch(e){
