@@ -320,12 +320,12 @@ function render(){
   renderRank(); renderSummary(); renderMatches();
 }
 function buildPrizeRows(){
-  const amt=[state.pot*0.7, state.pot*0.3];
-  const labels=["1er lugar · 70%","2º lugar · 30%"];
-  const medals=["🥇","🥈"];
+  const amt=[state.pot];
+  const labels=["1er lugar · 100%"];
+  const medals=["🥇"];
   const t=tally(), has=anyReal();
   let html=`<div class="pot-line">🏦 Pozo total: <b style="color:var(--gold)">${formatCOP(state.pot)}</b></div>`;
-  for(let i=0;i<2;i++){
+  for(let i=0;i<amt.length;i++){
     html+=`<div class="prize-row${i===0?" first":""}"><span class="m">${medals[i]}</span>`+
       `<div style="flex:1;"><div class="lbl">${labels[i]}</div></div>`+
       `<span class="amt">${formatCOP(amt[i])}</span></div>`;
