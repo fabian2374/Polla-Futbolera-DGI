@@ -114,17 +114,15 @@
   <div class="box">
     <h2>Compartir por internet</h2>
     <div id="cloudStatus" style="font-size:13px;font-weight:700;margin-bottom:10px;">⚙️ Sin conectar — pega tus códigos abajo</div>
-    <label for="cfgBin">BIN ID</label>
-    <input type="text" id="cfgBin" placeholder="ej: 6650a1b2ac1f3e8d..." autocomplete="off">
-    <label for="cfgMaster">MASTER KEY · escritura (privada, no compartir)</label>
-    <input type="text" id="cfgMaster" placeholder="$2a$10$..." autocomplete="off">
-    <label for="cfgAccess">ACCESS KEY · solo lectura (para el visor)</label>
-    <input type="text" id="cfgAccess" placeholder="$2a$10$..." autocomplete="off">
+    <label for="cfgUrl">DIRECCIÓN DEL SERVIDOR (Cloudflare Worker)</label>
+    <input type="text" id="cfgUrl" placeholder="https://polla-datos....workers.dev" autocomplete="off">
+    <label for="cfgToken">TOKEN DE ESCRITURA (privado, no compartir)</label>
+    <input type="text" id="cfgToken" placeholder="clave secreta" autocomplete="off">
     <div class="pill-row" style="gap:8px;margin-top:12px;">
       <button class="btn-gold btn-sm" style="flex:1;" onclick="saveCloudConfig()">💾 Guardar conexión</button>
       <button class="btn-ghost btn-sm" style="flex:1;" onclick="copyViewerNote()">🔗 Datos del visor</button>
     </div>
-    <div class="note">Pega los 3 códigos de JSONBin y pulsa <b>Guardar conexión</b> (se guardan en este navegador, no hay que tocar el código). Comparte solo <b>polla-visor.html</b> con los demás. Guía: <b>COMO-COMPARTIR.txt</b>.</div>
+    <div class="note">Los datos se publican en tu Cloudflare Worker (sin límites de JSONBin). El TOKEN es privado: solo va en este editor. El visor solo necesita la dirección del servidor.</div>
   </div>
 
   <div class="box">
@@ -214,28 +212,27 @@ const FLAG=Object.fromEntries(TEAMS);
 const STORAGE_KEY="polla-dgi-v2";
 
 /* ========================================================================
-   CONFIGURACIÓN DE LA NUBE (JSONBin.io)
+   CONFIGURACIÓN DE LA NUBE (Cloudflare Worker propio)
    Ya NO hace falta editar el código: usa las casillas de la página.
    ======================================================================== */
-const CLOUD = { BIN_ID:"6a3167f5da38895dfeca5264", MASTER_KEY:"$2a$10$W0Xel91oTNA221naHM5kZOWTjFRYfAwuZEpxdIYHjxhN8MgUC0Hbm", ACCESS_KEY:"$2a$10$Gien/45/avsjP.hKkLl3N.7ii.SIpIJv2Qian83OlKR2vQX.UE.ZS" };
-const CLOUD_KEY = "polla-dgi-cloud";
-function cloudReady(){ return !!(CLOUD.BIN_ID && CLOUD.MASTER_KEY); }
+const CLOUD = { URL:"https://polla-datos.fabian2374.workers.dev", TOKEN:"dgi-polla-2026-Kx9mQ4vTz8Wp3nRb7Hs3" };
+const CLOUD_KEY = "polla-dgi-cloud-cf";
+function cloudReady(){ return !!(CLOUD.URL && CLOUD.TOKEN); }
 function loadCloudConfig(){
   try{ const c=JSON.parse(localStorage.getItem(CLOUD_KEY)||"{}");
-    CLOUD.BIN_ID=c.BIN_ID||CLOUD.BIN_ID; CLOUD.MASTER_KEY=c.MASTER_KEY||CLOUD.MASTER_KEY; CLOUD.ACCESS_KEY=c.ACCESS_KEY||CLOUD.ACCESS_KEY;
+    CLOUD.URL=c.URL||CLOUD.URL; CLOUD.TOKEN=c.TOKEN||CLOUD.TOKEN;
   }catch(e){}
 }
 function fillCloudFields(){
-  const b=document.getElementById("cfgBin"), m=document.getElementById("cfgMaster"), a=document.getElementById("cfgAccess");
-  if(b)b.value=CLOUD.BIN_ID; if(m)m.value=CLOUD.MASTER_KEY; if(a)a.value=CLOUD.ACCESS_KEY;
+  const u=document.getElementById("cfgUrl"), t=document.getElementById("cfgToken");
+  if(u)u.value=CLOUD.URL; if(t)t.value=CLOUD.TOKEN;
 }
 function saveCloudConfig(){
-  CLOUD.BIN_ID=document.getElementById("cfgBin").value.trim();
-  CLOUD.MASTER_KEY=document.getElementById("cfgMaster").value.trim();
-  CLOUD.ACCESS_KEY=document.getElementById("cfgAccess").value.trim();
+  CLOUD.URL=document.getElementById("cfgUrl").value.trim().replace(/\/+$/,"");
+  CLOUD.TOKEN=document.getElementById("cfgToken").value.trim();
   try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(CLOUD)); }catch(e){}
   if(cloudReady()){ alert("Conexión guardada. Publicando los datos..."); publish(); }
-  else{ setCloudStatus("off"); alert("Falta el BIN ID o la MASTER KEY."); }
+  else{ setCloudStatus("off"); alert("Falta la dirección del servidor o el TOKEN."); }
 }
 
 let state={ prize:"", pot:0, matches:[], people:[], predictions:{}, activeMatch:null };
@@ -273,9 +270,9 @@ async function publish(){
   publishing=true; setCloudStatus("publishing");
   try{
     const payload=Object.assign({}, state, {updatedAt:new Date().toISOString()});
-    const r=await fetch(`https://api.jsonbin.io/v3/b/${CLOUD.BIN_ID}`,{
+    const r=await fetch(CLOUD.URL,{
       method:"PUT",
-      headers:{"Content-Type":"application/json","X-Master-Key":CLOUD.MASTER_KEY},
+      headers:{"Content-Type":"application/json","X-Token":CLOUD.TOKEN},
       body:JSON.stringify(payload)
     });
     if(!r.ok)throw new Error("HTTP "+r.status);
@@ -286,9 +283,7 @@ async function publish(){
 async function pullFromCloud(){
   if(!cloudReady())return;
   try{
-    const r=await fetch(`https://api.jsonbin.io/v3/b/${CLOUD.BIN_ID}/latest`,{
-      headers:{"X-Master-Key":CLOUD.MASTER_KEY,"X-Bin-Meta":"false"}
-    });
+    const r=await fetch(CLOUD.URL,{cache:"no-store"});
     if(!r.ok)throw new Error("HTTP "+r.status);
     const data=await r.json();
     const cloud=(data&&data.record)?data.record:data;
@@ -316,9 +311,9 @@ function setCloudStatus(s){
   el.textContent=txt; el.style.color=col;
 }
 function copyViewerNote(){
-  if(!cloudReady()){ alert("Primero configura la nube (BIN_ID y claves)."); return; }
-  const txt="BIN_ID: "+CLOUD.BIN_ID+"\nACCESS_KEY: "+CLOUD.ACCESS_KEY;
-  try{ navigator.clipboard.writeText(txt); alert("Copiado. Pega estos valores en polla-visor.html (BIN_ID y ACCESS_KEY)."); }
+  if(!cloudReady()){ alert("Primero configura la nube (dirección y token)."); return; }
+  const txt="SERVIDOR: "+CLOUD.URL;
+  try{ navigator.clipboard.writeText(txt); alert("Copiado. Pega esta dirección en el visor (⚙️). El TOKEN no se comparte."); }
   catch(e){ alert(txt); }
 }
 

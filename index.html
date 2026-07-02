@@ -105,15 +105,13 @@
 
   <div class="box" id="cfgBox" style="display:none;">
     <h2>Conexión</h2>
-    <label for="cfgBin">BIN ID</label>
-    <input type="text" id="cfgBin" placeholder="6650a1b2ac..." autocomplete="off">
-    <label for="cfgAccess">ACCESS KEY (solo lectura)</label>
-    <input type="text" id="cfgAccess" placeholder="$2a$10$..." autocomplete="off">
+    <label for="cfgUrl">DIRECCIÓN DEL SERVIDOR</label>
+    <input type="text" id="cfgUrl" placeholder="https://polla-datos....workers.dev" autocomplete="off">
     <div class="pill-row" style="gap:8px;margin-top:12px;">
       <button class="btn-gold btn-sm" style="flex:1;" onclick="saveCloudConfig()">💾 Conectar</button>
       <button class="btn-ghost btn-sm" style="flex:1;" onclick="copyShareLink()">🔗 Copiar enlace</button>
     </div>
-    <div class="note">Pega el BIN ID y la ACCESS KEY (los copias del editor con "🔗 Datos del visor"). "Copiar enlace" genera un link que ya incluye la conexión: compártelo y se abre conectado sin configurar nada.</div>
+    <div class="note">Pega la dirección del servidor (la copias del editor con "🔗 Datos del visor"). "Copiar enlace" genera un link que ya incluye la conexión: compártelo y se abre conectado sin configurar nada.</div>
   </div>
 
   <div class="box" id="prizeBox" style="display:none;">
@@ -232,29 +230,27 @@ async function applyLiveScores(){
    CONFIGURACIÓN — usa las casillas (⚙️) o abre un enlace con la conexión.
    ======================================================================== */
 // Conexión incrustada (solo lectura) — para repartir por OneDrive.
-const DEFAULT_BIN_ID    = "6a3167f5da38895dfeca5264";
-const DEFAULT_ACCESS_KEY= "$2a$10$Gien/45/avsjP.hKkLl3N.7ii.SIpIJv2Qian83OlKR2vQX.UE.ZS";
+const DEFAULT_URL = "https://polla-datos.fabian2374.workers.dev";
 
-const CLOUD = { BIN_ID:"", ACCESS_KEY:"" };
-const CLOUD_KEY = "polla-dgi-visor-cloud";
-const REFRESH_MS = 20000; // auto-actualiza cada 20 s
-function cloudReady(){ return !!(CLOUD.BIN_ID && CLOUD.ACCESS_KEY); }
+const CLOUD = { URL:"" };
+const CLOUD_KEY = "polla-dgi-visor-cloud-cf";
+const REFRESH_MS = 30000; // auto-actualiza cada 30 s
+function cloudReady(){ return !!CLOUD.URL; }
 function loadCloudConfig(){
   const q=new URLSearchParams(location.search);
-  const bin=q.get("bin"), key=q.get("key");
-  if(bin&&key){ CLOUD.BIN_ID=bin; CLOUD.ACCESS_KEY=key;
+  const srv=q.get("srv");
+  if(srv){ CLOUD.URL=srv;
     try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(CLOUD)); }catch(e){}
     return;
   }
   try{ const c=JSON.parse(localStorage.getItem(CLOUD_KEY)||"{}");
-    CLOUD.BIN_ID=c.BIN_ID||""; CLOUD.ACCESS_KEY=c.ACCESS_KEY||"";
+    CLOUD.URL=c.URL||"";
   }catch(e){}
-  if(!CLOUD.BIN_ID) CLOUD.BIN_ID=DEFAULT_BIN_ID;
-  if(!CLOUD.ACCESS_KEY) CLOUD.ACCESS_KEY=DEFAULT_ACCESS_KEY;
+  if(!CLOUD.URL) CLOUD.URL=DEFAULT_URL;
 }
 function fillCloudFields(){
-  const b=document.getElementById("cfgBin"), a=document.getElementById("cfgAccess");
-  if(b)b.value=CLOUD.BIN_ID; if(a)a.value=CLOUD.ACCESS_KEY;
+  const u=document.getElementById("cfgUrl");
+  if(u)u.value=CLOUD.URL;
 }
 function toggleCfg(force){
   const box=document.getElementById("cfgBox");
@@ -262,21 +258,19 @@ function toggleCfg(force){
   box.style.display = show ? "" : "none";
 }
 function saveCloudConfig(){
-  CLOUD.BIN_ID=document.getElementById("cfgBin").value.trim();
-  CLOUD.ACCESS_KEY=document.getElementById("cfgAccess").value.trim();
+  CLOUD.URL=document.getElementById("cfgUrl").value.trim().replace(/\/+$/,"");
   try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(CLOUD)); }catch(e){}
   if(cloudReady()){ toggleCfg(false); refresh(); }
-  else alert("Falta el BIN ID o la ACCESS KEY.");
+  else alert("Falta la dirección del servidor.");
 }
 function buildShareUrl(){
-  const bin=document.getElementById("cfgBin").value.trim();
-  const key=document.getElementById("cfgAccess").value.trim();
-  if(!bin||!key){ alert("Primero pon el BIN ID y la ACCESS KEY."); return null; }
+  const srv=document.getElementById("cfgUrl").value.trim().replace(/\/+$/,"");
+  if(!srv){ alert("Primero pon la dirección del servidor."); return null; }
   if(location.protocol==="file:"){
     alert("Para compartir, primero publica este visor en internet (ej. Netlify Drop) y ábrelo desde esa dirección web. Desde un archivo local el enlace no funcionará para otros.");
     return null;
   }
-  return location.origin+location.pathname+"?bin="+encodeURIComponent(bin)+"&key="+encodeURIComponent(key);
+  return location.origin+location.pathname+"?srv="+encodeURIComponent(srv);
 }
 function copyShareLink(){
   const url=buildShareUrl(); if(!url)return;
@@ -426,12 +420,10 @@ function setStat(txt,cls){
   dot.className="dot"+(cls?" "+cls:"");
 }
 async function refresh(){
-  if(!cloudReady()){ setStat("Sin configurar (BIN_ID/ACCESS_KEY)","err"); return; }
+  if(!cloudReady()){ setStat("Sin configurar (dirección del servidor)","err"); return; }
   setStat("Actualizando…","stale");
   try{
-    const r=await fetch(`https://api.jsonbin.io/v3/b/${CLOUD.BIN_ID}/latest?meta=false`,{
-      headers:{"X-Access-Key":CLOUD.ACCESS_KEY}
-    });
+    const r=await fetch(CLOUD.URL,{cache:"no-store"});
     if(!r.ok)throw new Error("HTTP "+r.status);
     const data=await r.json();
     const rec=data.record||data;
