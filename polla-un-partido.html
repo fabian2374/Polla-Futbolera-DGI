@@ -178,7 +178,7 @@
     <h2>Predicciones</h2>
     <div class="tabs" id="predTabs"></div>
     <div id="predArea"></div>
-    <div class="note">🎯 Marcador exacto = 3 pts · ✅ acertar el ganador/empate (sin importar el marcador) = 1 pt · ⬜ fallar = 0</div>
+    <div class="note">🎯 Marcador exacto = 8 pts (excluyente) · ✅ acertar quién gana o el empate = 3 pts · ⚽ bonus por acertar un gol del marcador = +1 (se suma con la victoria; también aplica solo) · ⬜ fallar = 0</div>
   </div>
 
   <div class="box">
@@ -404,7 +404,7 @@ function renderPotDisplay(){
   const d=document.getElementById("potDisplay");
   if(state.pot>0){
     d.innerHTML=`🏦 Pozo: <b>${formatCOP(state.pot)}</b><br>`+
-      `🥇 70%: <b>${formatCOP(state.pot*0.7)}</b> · 🥈 30%: <b>${formatCOP(state.pot*0.3)}</b>`;
+      `🥇 100%: <b>${formatCOP(state.pot)}</b>`;
   }else d.innerHTML="";
 }
 potEl.addEventListener("input",()=>{
@@ -497,17 +497,19 @@ function renderPred(){
 function pointsFor(pred,real){
   if(!pred||pred.h==null||pred.a==null)return 0;
   if(real.h==null||real.a==null)return 0;
-  if(pred.h===real.h&&pred.a===real.a)return 3;          // marcador exacto
+  if(pred.h===real.h&&pred.a===real.a)return 8;          // marcador exacto (excluyente)
+  let pts=0;
   const sign=(x,y)=>x>y?1:x<y?-1:0;
-  if(sign(pred.h,pred.a)===sign(real.h,real.a)) return 1; // acierta ganador/empate (sin importar marcador)
-  return 0;
+  if(sign(pred.h,pred.a)===sign(real.h,real.a)) pts+=3;  // acierta ganador/empate
+  if(pred.h===real.h||pred.a===real.a) pts+=1;           // bonus: acierta un gol del marcador (acumulable)
+  return pts;
 }
 function totalFor(name){
   let pts=0,exact=0;
   state.matches.forEach(m=>{
     const pr=state.predictions[name]?state.predictions[name][m.id]:null;
     const pt=pointsFor(pr,m.real);
-    pts+=pt; if(pt===3)exact++;
+    pts+=pt; if(pt===8)exact++;
   });
   return {pts,exact};
 }
@@ -576,7 +578,7 @@ function renderSummary(){
       const mk=has?`${pr.h}-${pr.a}`:"—";
       const hasR=m.real.h!=null&&m.real.a!=null;
       const pt=pointsFor(pr,m.real);
-      const cls=hasR?(pt===3?"hit3":pt===1?"hit1":""):"";
+      const cls=hasR?(pt>=3?"hit3":pt===1?"hit1":""):"";
       const ptTxt=hasR?`<span class="pt">${pt} pt${pt===1?"":"s"}</span>`:"";
       body+=`<td class="${cls}"><span class="pred">${mk}</span>${ptTxt}</td>`;
     });

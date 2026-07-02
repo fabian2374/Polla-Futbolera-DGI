@@ -127,13 +127,13 @@
     <table class="points-tbl">
       <thead><tr><th>Criterio</th><th>Puntos</th></tr></thead>
       <tbody>
-        <tr><td>🎯 Marcador exacto (excluyente)</td><td class="p">5</td></tr>
+        <tr><td>🎯 Marcador exacto (excluyente)</td><td class="p">8</td></tr>
         <tr><td>✅ Acertar quién gana (o el empate)</td><td class="p">3</td></tr>
         <tr><td>⚽ Bonus: acertar un gol del marcador (se suma)</td><td class="p">+1</td></tr>
         <tr><td>⬜ Fallar</td><td class="p">0</td></tr>
       </tbody>
     </table>
-    <div class="note">El marcador exacto (5 pts) es excluyente: no se suma con nada más. La victoria (3) y el bonus de gol (+1) sí se acumulan entre sí. El bonus también aplica solo, aunque falles al ganador. Ej.: predices 2-1 y queda 2-1 → 5 pts; predices 2-0 y queda 3-1 → 3 pts (mismo ganador); predices 2-1 y queda 2-0 → 4 pts (ganador 3 + un gol 1); predices 2-0 y queda 0-0 → 1 pt (acertaste un cero).</div>
+    <div class="note">El marcador exacto (8 pts) es excluyente: no se suma con nada más. La victoria (3) y el bonus de gol (+1) sí se acumulan entre sí. El bonus también aplica solo, aunque falles al ganador. Ej.: predices 2-1 y queda 2-1 → 8 pts; predices 2-0 y queda 3-1 → 3 pts (mismo ganador); predices 2-1 y queda 2-0 → 4 pts (ganador 3 + un gol 1); predices 2-0 y queda 0-0 → 1 pt (acertaste un cero).</div>
   </div>
 
   <div class="box">
@@ -291,7 +291,7 @@ function formatCOP(n){ return "$ "+Math.round(n||0).toLocaleString("es-CO"); }
 function pointsFor(pred,real){
   if(!pred||pred.h==null||pred.a==null)return 0;
   if(!real||real.h==null||real.a==null)return 0;
-  if(pred.h===real.h&&pred.a===real.a)return 5;          // marcador exacto (excluyente)
+  if(pred.h===real.h&&pred.a===real.a)return 8;          // marcador exacto (excluyente)
   let pts=0;
   const sign=(x,y)=>x>y?1:x<y?-1:0;
   if(sign(pred.h,pred.a)===sign(real.h,real.a)) pts+=3;  // acierta ganador/empate
@@ -302,7 +302,7 @@ function totalFor(name){
   let pts=0,exact=0;
   state.matches.forEach(m=>{
     const pr=state.predictions[name]?state.predictions[name][m.id]:null;
-    const pt=pointsFor(pr,m.real); pts+=pt; if(pt===5)exact++;
+    const pt=pointsFor(pr,m.real); pts+=pt; if(pt===8)exact++;
   });
   return {pts,exact};
 }
