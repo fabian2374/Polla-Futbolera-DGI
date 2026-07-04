@@ -431,7 +431,9 @@ async function refresh(){
     const rec=data.record||data;
     state={ prize:rec.prize||"", pot:rec.pot||0, matches:rec.matches||[], people:rec.people||[],
             predictions:rec.predictions||{}, updatedAt:rec.updatedAt||null };
-    await applyLiveScores();   // superpone marcador en vivo/final desde football-data
+    // MARCADOR EN LÍNEA desactivado (modo manual). Descomenta para reactivar:
+    // await applyLiveScores();   // superpone marcador en vivo/final desde football-data
+    state.matches.forEach(m=>{ if(m.real){ m.real.partial=false; m.real.min=null; m.real.paused=false; } });
     render();
     const now=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
     setStat("Actualizado "+now,"");
