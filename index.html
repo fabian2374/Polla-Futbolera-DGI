@@ -155,6 +155,8 @@
   .podium-svg .fig3{animation:podSway 2.5s ease-in-out infinite .3s;transform-box:fill-box;transform-origin:50% 100%;}
   .podium-svg .star{animation:podStar 1.05s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%;}
   .podium-svg .cf{transform-box:fill-box;transform-origin:center;animation-name:podConfetti;animation-timing-function:linear;animation-iteration-count:infinite;}
+  .podium-svg .tear{transform-box:fill-box;transform-origin:center;animation:podTear 1.3s ease-in infinite;}
+  @keyframes podTear{0%{transform:translateY(0);opacity:0;}20%{opacity:.95;}100%{transform:translateY(15px);opacity:0;}}
   @keyframes podJump{0%,100%{transform:translateY(0);}28%{transform:translateY(-13px);}52%{transform:translateY(0);}}
   @keyframes podSway{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
   @keyframes podStar{0%,100%{transform:scale(1) rotate(-8deg);}50%{transform:scale(1.28) rotate(8deg);}}
