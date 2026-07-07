@@ -5,22 +5,95 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Polla Futbolera — DGI (Visor)</title>
 <style>
-  :root{--pitch:#0a5c36;--pitch-dark:#073f25;--chalk:#f5f3e8;--gold:#e8b923;
-    --line:rgba(245,243,232,0.16);--card:#0d6b3f;--green-ok:#37d67a;--amber-ok:#ffb547;}
+  :root{--pitch:#0b2a6b;--pitch-dark:#071c4d;--chalk:#f7f5ec;--gold:#FCD116;
+    --azul:#003893;--rojo:#CE1126;
+    --line:rgba(247,245,236,0.16);--card:rgba(11,42,107,.78);--green-ok:#37d67a;--amber-ok:#ffb547;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;
-    background:repeating-linear-gradient(90deg,var(--pitch) 0 60px,var(--pitch-dark) 60px 120px);
-    color:var(--chalk);min-height:100vh;padding:22px 14px 40px;}
-  .wrap{max-width:560px;margin:0 auto;}
-  header{text-align:center;margin-bottom:18px;border-bottom:2px solid var(--line);padding-bottom:16px;}
-  .eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700;}
+    background:#051436;color:var(--chalk);min-height:100vh;padding:0 14px 40px;position:relative;}
+  /* Estadio de la Selección (estilo Metropolitano de Barranquilla) dibujado en SVG */
+  body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      linear-gradient(180deg,rgba(5,20,54,.82) 0%,rgba(5,20,54,.62) 45%,rgba(5,20,54,.86) 100%),
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMax slice"><rect width="1200" height="700" fill="%23051436"/><circle cx="600" cy="90" r="46" fill="%23fcd116" opacity=".25"/><g stroke="%238fa8d8" stroke-width="6" opacity=".8"><line x1="150" y1="330" x2="185" y2="120"/><line x1="1050" y1="330" x2="1015" y2="120"/></g><g fill="%23fcd116"><rect x="160" y="100" width="52" height="26" rx="6" opacity=".95"/><rect x="988" y="100" width="52" height="26" rx="6" opacity=".95"/></g><g opacity=".5"><polygon points="186,126 120,330 260,330" fill="%23fcd116" opacity=".12"/><polygon points="1014,126 940,330 1080,330" fill="%23fcd116" opacity=".12"/></g><path d="M60,420 Q600,240 1140,420 L1140,470 Q600,300 60,470 Z" fill="%23CE1126" opacity=".85"/><path d="M60,470 Q600,300 1140,470 L1140,530 Q600,360 60,530 Z" fill="%23003893" opacity=".9"/><path d="M60,530 Q600,360 1140,530 L1140,620 Q600,440 60,620 Z" fill="%23fcd116" opacity=".9"/><path d="M40,400 Q600,215 1160,400 L1160,424 Q600,244 40,424 Z" fill="%23e9eef8" opacity=".9"/><path d="M60,620 Q600,440 1140,620 L1140,700 L60,700 Z" fill="%230a5c36"/><g stroke="%23f5f3e8" stroke-width="3" fill="none" opacity=".8"><path d="M60,660 Q600,480 1140,660"/><ellipse cx="600" cy="640" rx="70" ry="22"/><line x1="600" y1="530" x2="600" y2="662"/></g><g fill="%23f5f3e8" opacity=".9"><rect x="530" y="470" width="140" height="4" rx="2"/><rect x="560" y="474" width="4" height="26"/><rect x="636" y="474" width="4" height="26"/></g></svg>');
+    background-size:cover;background-position:center bottom;background-repeat:no-repeat;}
+  /* franja tricolor de la bandera de Colombia */
+  body::before{content:"";display:block;height:14px;margin:0 -14px 22px;
+    background:linear-gradient(180deg,var(--gold) 0 50%,var(--azul) 50% 75%,var(--rojo) 75% 100%);}
+  .wrap{max-width:560px;margin:0 auto;position:relative;z-index:1;}
+  header{text-align:center;margin-bottom:18px;padding-bottom:16px;border-bottom:none;position:relative;}
+  header::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+    width:180px;height:5px;border-radius:3px;
+    background:linear-gradient(90deg,var(--gold) 0 50%,var(--azul) 50% 75%,var(--rojo) 75% 100%);}
+  .eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#ffffff;font-weight:700;}
   h1{font-size:clamp(24px,7vw,34px);font-weight:800;letter-spacing:-1px;margin:4px 0;}
+  h1.fam{font-size:clamp(28px,8vw,42px);font-weight:900;
+    animation:famColors 60s ease-in-out infinite;}
+  h1.dgi{font-size:clamp(56px,18vw,104px);font-weight:900;letter-spacing:2px;line-height:1;}
+  .dgi-stage{position:relative;display:inline-block;}
+  .dgi-stage .lt{display:inline-block;will-change:transform;}
+  .dgi-stage .lt.d{animation:kickLean 8s ease-in-out infinite;}
+  .dgi-stage .lt.i{animation:kickLean 8s ease-in-out infinite;animation-delay:.09s;}
+  .dgi-stage .lt.g{animation:gSwap 8s ease-in-out infinite;}
+  .dgi-stage .ball{position:absolute;left:50%;top:50%;font-size:.5em;line-height:1;opacity:0;
+     transform:translate(-50%,-50%) scale(.2);pointer-events:none;
+     filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));animation:ballPlay 8s cubic-bezier(.4,.1,.5,1) infinite;}
+  .dgi-stage .goal{position:absolute;left:50%;top:50%;width:1.5em;height:1.05em;pointer-events:none;
+     filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));animation:netHit 8s ease-in-out infinite;}
+  .dgi-stage .gol{position:absolute;left:50%;top:-.2em;font-size:.32em;font-weight:900;letter-spacing:2px;
+     white-space:nowrap;color:#FCD116;opacity:0;pointer-events:none;
+     text-shadow:0 2px 6px rgba(0,0,0,.6),0 0 14px rgba(252,209,22,.7);
+     transform:translate(-50%,8px) scale(.4);animation:golPop 8s ease-in-out infinite;}
+  @keyframes kickLean{
+    0%,46%,66%,100%{transform:rotate(0) translateY(0);}
+    50%{transform:rotate(-7deg) translateY(2px);}
+    54%{transform:rotate(5deg) translateY(-1px);}
+    58%{transform:rotate(0) translateY(0);}
+  }
+  @keyframes gSwap{
+    0%,48%{opacity:1;transform:scale(1) rotate(0);}
+    50%,84%{opacity:0;transform:scale(.2) rotate(-40deg);}
+    92%,100%{opacity:1;transform:scale(1) rotate(0);}
+  }
+  @keyframes ballPlay{
+    0%,48%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(0);}
+    50%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0);}
+    56%{opacity:1;transform:translate(calc(-50% + .5em),calc(-50% - .75em)) scale(.92) rotate(320deg);}
+    63%{opacity:1;transform:translate(calc(-50% + 1.0em),calc(-50% - .85em)) scale(.82) rotate(620deg);}
+    70%{opacity:1;transform:translate(calc(-50% + 1.55em),calc(-50% - .1em)) scale(.66) rotate(1000deg);}
+    78%{opacity:1;transform:translate(calc(-50% + 1.6em),calc(-50% + .02em)) scale(.64) rotate(1060deg);}
+    83%{opacity:0;transform:translate(calc(-50% + 1.6em),calc(-50% + .05em)) scale(.62) rotate(1080deg);}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(0);}
+  }
+  @keyframes netHit{
+    0%,67%{transform:translate(.95em,-50%) scale(1);}
+    71%{transform:translate(.95em,-50%) scale(1.09);}
+    75%{transform:translate(.95em,-50%) scale(.96);}
+    80%,100%{transform:translate(.95em,-50%) scale(1);}
+  }
+  @keyframes golPop{
+    0%,69%{opacity:0;transform:translate(-50%,8px) scale(.3) rotate(-6deg);}
+    73%{opacity:1;transform:translate(-50%,-6px) scale(1.2) rotate(-6deg);}
+    86%{opacity:1;transform:translate(-50%,-8px) scale(1) rotate(-6deg);}
+    93%,100%{opacity:0;transform:translate(-50%,-8px) scale(1) rotate(-6deg);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .dgi-stage .ball,.dgi-stage .goal,.dgi-stage .gol,.dgi-stage .lt{animation:none;}
+    .dgi-stage .ball,.dgi-stage .gol{opacity:0;}
+    .dgi-stage .lt.g{opacity:1;transform:none;}
+  }
+  @keyframes famColors{
+    0%,30%,100%{color:var(--gold);text-shadow:0 0 18px rgba(252,209,22,.6),0 2px 4px rgba(0,0,0,.6);}
+    33%,63%{color:#4a7dff;text-shadow:0 0 18px rgba(74,125,255,.65),0 2px 4px rgba(0,0,0,.6);}
+    66%,96%{color:#ff4b5c;text-shadow:0 0 18px rgba(255,75,92,.65),0 2px 4px rgba(0,0,0,.6);}
+  }
   .sub{font-size:13px;opacity:.75;}
-  .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  #fxCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;backdrop-filter:blur(3px);}
   .box h2{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;}
   button{border:none;border-radius:9px;padding:11px 16px;font-size:14px;font-weight:700;cursor:pointer;transition:transform .1s,filter .15s;}
   button:active{transform:scale(.97);}
-  .btn-gold{background:var(--gold);color:#1a1300;}
+  .btn-gold{background:var(--gold);color:#0b2a6b;}
   .btn-gold:hover{filter:brightness(1.08);}
   .prize-display{font-size:17px;font-weight:800;color:var(--gold);}
   .prize-row{display:flex;align-items:center;gap:10px;background:var(--pitch-dark);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
@@ -52,7 +125,7 @@
   table.summary thead th .real.pending{color:var(--amber-ok);font-weight:700;}
   table.summary thead th .mh{font-size:10px;opacity:.65;}
   table.summary thead th .tm{display:block;color:var(--chalk);font-size:11.5px;font-weight:700;text-transform:none;letter-spacing:0;margin-top:2px;}
-  table.summary td.name{text-align:left;font-weight:700;position:sticky;left:0;background:var(--card);z-index:1;}
+  table.summary td.name{text-align:left;font-weight:700;position:sticky;left:0;background:#0b2a6b;z-index:1;}
   table.summary th.name{text-align:left;position:sticky;left:0;background:var(--pitch-dark);z-index:2;}
   table.summary td.total{font-weight:800;color:var(--gold);background:var(--pitch-dark);}
   table.summary th.total{background:var(--pitch-dark);}
@@ -64,16 +137,35 @@
 
   .rank{list-style:none;margin-top:6px;}
   .rank li{display:flex;align-items:center;gap:12px;background:var(--pitch-dark);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:8px;}
-  .rank li.first{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+  .rank li.first{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;
+    background:linear-gradient(90deg,rgba(252,209,22,.14),var(--pitch-dark) 60%);}
   .pos{font-size:20px;font-weight:800;width:30px;text-align:center;}
   .rank .nm{flex:1;font-weight:700;font-size:15px;}
   .pts{font-size:18px;font-weight:800;color:var(--gold);}
   .pts small{font-size:11px;opacity:.7;}
-  .winner-banner{background:var(--gold);color:#1a1300;border-radius:12px;padding:16px;text-align:center;font-weight:800;margin-bottom:14px;}
+  .winner-banner{background:var(--gold);color:#0b2a6b;border-radius:12px;padding:16px;text-align:center;font-weight:800;margin-bottom:14px;
+    border-bottom:5px solid var(--rojo);box-shadow:0 5px 0 -2px var(--azul);}
   .winner-banner .big{font-size:20px;display:block;margin-top:4px;}
+  .celebrate{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 10px 14px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden;backdrop-filter:blur(3px);border-bottom:5px solid var(--rojo);box-shadow:0 5px 0 -2px var(--azul);}
+  .podium-svg{width:100%;max-width:340px;height:auto;display:block;margin:0 auto;}
+  .champ-name{font-weight:900;color:var(--gold);font-size:18px;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.5);}
+  .champ-prize{font-size:13px;opacity:.9;margin-top:3px;}
+  .podium-svg .fig1{animation:podJump 1.05s ease-in-out infinite;}
+  .podium-svg .fig2{animation:podSway 2.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%;}
+  .podium-svg .fig3{animation:podSway 2.5s ease-in-out infinite .3s;transform-box:fill-box;transform-origin:50% 100%;}
+  .podium-svg .star{animation:podStar 1.05s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%;}
+  .podium-svg .cf{transform-box:fill-box;transform-origin:center;animation-name:podConfetti;animation-timing-function:linear;animation-iteration-count:infinite;}
+  @keyframes podJump{0%,100%{transform:translateY(0);}28%{transform:translateY(-13px);}52%{transform:translateY(0);}}
+  @keyframes podSway{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
+  @keyframes podStar{0%,100%{transform:scale(1) rotate(-8deg);}50%{transform:scale(1.28) rotate(8deg);}}
+  @keyframes podConfetti{0%{transform:translateY(-18px) rotate(0);opacity:0;}10%{opacity:1;}100%{transform:translateY(150px) rotate(400deg);opacity:0;}}
+  @media (prefers-reduced-motion:reduce){
+    .podium-svg .fig1,.podium-svg .fig2,.podium-svg .fig3,.podium-svg .star,.podium-svg .cf{animation:none;}
+    .podium-svg .cf{opacity:0;}
+  }
   .note{font-size:12px;opacity:.7;margin-top:10px;line-height:1.5;}
   .empty{opacity:.6;text-align:center;padding:24px 10px;font-size:14px;}
-  .live-tag{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#fff;background:#d12d2d;border-radius:5px;padding:2px 7px;vertical-align:middle;animation:livepulse 1.4s ease-in-out infinite;}
+  .live-tag{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#fff;background:var(--rojo);border-radius:5px;padding:2px 7px;vertical-align:middle;animation:livepulse 1.4s ease-in-out infinite;}
   .live-tag.pause{background:#c87a00;animation:none;}
   @keyframes livepulse{0%,100%{opacity:1;}50%{opacity:.45;}}
   .match-line{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--pitch-dark);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-weight:700;font-size:14px;}
@@ -88,11 +180,60 @@
 </style>
 </head>
 <body>
+<canvas id="fxCanvas"></canvas>
+<script>
+(function(){
+  const cv=document.getElementById('fxCanvas'),cx=cv.getContext('2d');
+  let W,H;function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;}rs();addEventListener('resize',rs);
+  const COLORS=['#FCD116','#CE1126','#4a7dff','#ffffff','#37d67a','#ff9e3d'];
+  const rockets=[],parts=[];
+  function launch(){
+    rockets.push({x:W*(0.1+Math.random()*0.8),y:H+10,vy:-(H*0.009+Math.random()*H*0.004),
+      ty:H*(0.12+Math.random()*0.3),c:COLORS[Math.floor(Math.random()*COLORS.length)]});
+  }
+  function explode(x,y,c){
+    const n=55+Math.random()*35|0;
+    for(let i=0;i<n;i++){
+      const a=Math.PI*2*i/n+Math.random()*0.2,s=2+Math.random()*4.5;
+      parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,c:Math.random()<0.7?c:COLORS[Math.floor(Math.random()*COLORS.length)]});
+    }
+  }
+  let last=0;
+  function tick(t){
+    requestAnimationFrame(tick);
+    if(t-last>1600+Math.random()*1400){last=t;launch();if(Math.random()<0.3)launch();}
+    cx.clearRect(0,0,W,H);
+    for(let i=rockets.length-1;i>=0;i--){
+      const r=rockets[i];r.y+=r.vy;r.vy+=0.03;
+      cx.globalAlpha=1;cx.fillStyle=r.c;
+      cx.shadowBlur=12;cx.shadowColor=r.c;
+      cx.beginPath();cx.arc(r.x,r.y,3.2,0,7);cx.fill();
+      cx.shadowBlur=0;
+      cx.globalAlpha=0.45;cx.fillRect(r.x-1,r.y,2,18);
+      if(r.y<=r.ty||r.vy>=0){explode(r.x,r.y,r.c);rockets.splice(i,1);}
+    }
+    for(let i=parts.length-1;i>=0;i--){
+      const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.vx*=0.985;p.life-=0.009;
+      if(p.life<=0){parts.splice(i,1);continue;}
+      cx.globalAlpha=Math.max(p.life,0)*0.85;cx.fillStyle=p.c;
+      cx.shadowBlur=6;cx.shadowColor=p.c;
+      cx.beginPath();cx.arc(p.x,p.y,2+p.life*1.8,0,7);cx.fill();
+    }
+    cx.shadowBlur=0;cx.globalAlpha=1;
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
 <div class="wrap">
   <header>
-    <div class="eyebrow">DGI · Polla Futbolera</div>
-    <h1>Mundial 2026</h1>
-    <div class="sub">Marcadores, predicciones y ranking en vivo</div>
+    <div class="eyebrow">🇨🇴 Polla Futbolera · Mundial 2026 🇨🇴</div>
+    <h1 class="fam dgi"><span class="dgi-stage">
+        <span class="lt d">D</span><span class="lt g">G</span><span class="lt i">I</span>
+        <span class="ball" aria-hidden="true">⚽</span>
+        <svg class="goal" viewBox="0 0 80 60" aria-hidden="true"><g fill="none" stroke="#f7f5ec"><rect x="6" y="6" width="68" height="48" rx="2" stroke-width="4"/><g stroke-width="1" opacity=".55"><line x1="6" y1="18" x2="74" y2="18"/><line x1="6" y1="30" x2="74" y2="30"/><line x1="6" y1="42" x2="74" y2="42"/><line x1="20" y1="6" x2="20" y2="54"/><line x1="34" y1="6" x2="34" y2="54"/><line x1="48" y1="6" x2="48" y2="54"/><line x1="62" y1="6" x2="62" y2="54"/></g></g></svg>
+        <span class="gol" aria-hidden="true">¡GOOOL!</span>
+      </span></h1>
+    <div class="sub">Dirección de Gestión Interinstitucional</div>
   </header>
 
   <div class="refresh-bar">
@@ -331,6 +472,47 @@ function buildPrizeRows(){
   }
   return html;
 }
+function buildPodium(winners, top){
+  const cols=['#FCD116','#CE1126','#4a7dff','#ffffff','#37d67a','#ff9e3d'];
+  const fig=(cx,fy,jersey,cls)=>{
+    const hy=fy-32;
+    return `<g class="${cls}">`+
+      `<line x1="${cx-4}" y1="${fy-11}" x2="${cx-5}" y2="${fy}" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round"/>`+
+      `<line x1="${cx+4}" y1="${fy-11}" x2="${cx+5}" y2="${fy}" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round"/>`+
+      `<rect x="${cx-7}" y="${fy-27}" width="14" height="17" rx="5" fill="${jersey}" stroke="rgba(0,0,0,.18)" stroke-width="1"/>`+
+      `<line x1="${cx-6}" y1="${fy-25}" x2="${cx-15}" y2="${fy-39}" stroke="${jersey}" stroke-width="4" stroke-linecap="round"/>`+
+      `<line x1="${cx+6}" y1="${fy-25}" x2="${cx+15}" y2="${fy-39}" stroke="${jersey}" stroke-width="4" stroke-linecap="round"/>`+
+      `<circle cx="${cx-15}" cy="${fy-39}" r="3" fill="#f2c49b"/>`+
+      `<circle cx="${cx+15}" cy="${fy-39}" r="3" fill="#f2c49b"/>`+
+      `<circle cx="${cx}" cy="${hy}" r="7.5" fill="#f2c49b"/>`+
+      `</g>`;
+  };
+  const star=`<g class="star"><polygon points="160,20 162.5,27 170,27 164,31.5 166,39 160,34.5 154,39 156,31.5 150,27 157.5,27" fill="#FCD116" stroke="#e0a800" stroke-width="1"/></g>`;
+  let cf='';
+  for(let i=0;i<16;i++){
+    const x=(8+Math.random()*304).toFixed(1), c=cols[i%cols.length];
+    const dur=(2.2+Math.random()*2.2).toFixed(2), del=(Math.random()*3).toFixed(2);
+    const w=(4+Math.random()*3).toFixed(1), h=(6+Math.random()*4).toFixed(1);
+    cf+=`<rect class="cf" x="${x}" y="0" width="${w}" height="${h}" rx="1" fill="${c}" style="animation-duration:${dur}s;animation-delay:${del}s"/>`;
+  }
+  const name=winners.join(" y ");
+  return `<div class="celebrate">`+
+    `<svg class="podium-svg" viewBox="0 0 320 170" aria-hidden="true">`+
+      `<rect x="52" y="95" width="68" height="65" rx="3" fill="#c9ced6"/>`+
+      `<rect x="200" y="110" width="68" height="50" rx="3" fill="#cd7f32"/>`+
+      `<rect x="120" y="70" width="80" height="90" rx="3" fill="#FCD116"/>`+
+      `<text x="86" y="134" text-anchor="middle" font-size="20" font-weight="900" fill="#5b6068">2</text>`+
+      `<text x="234" y="142" text-anchor="middle" font-size="18" font-weight="900" fill="#7a4a15">3</text>`+
+      `<text x="160" y="124" text-anchor="middle" font-size="28" font-weight="900" fill="#0b2a6b">1</text>`+
+      fig(86,95,'#003893','fig2')+
+      fig(234,110,'#CE1126','fig3')+
+      fig(160,70,'#ffffff','fig1')+
+      star+cf+
+    `</svg>`+
+    `<div class="champ-name">🏆 ${name} · ${top} pts</div>`+
+    (state.prize?`<div class="champ-prize">${state.prize}</div>`:``)+
+  `</div>`;
+}
 function renderRank(){
   const area=document.getElementById("rankArea");
   if(!state.people.length){ area.innerHTML='<div class="empty">Aún no hay participantes.</div>'; return; }
@@ -339,11 +521,11 @@ function renderRank(){
   const winners=t.filter(x=>x.pts===top&&top>0).map(x=>x.name);
   let html="";
   if(has){
-    html+=`<div class="winner-banner">Líder${winners.length>1?"es":""} del torneo`;
-    if(winners.length) html+=`<span class="big">${winners.join(" y ")} · ${top} pts</span>`;
-    else html+=`<span class="big">Nadie ha sumado puntos aún</span>`;
-    if(state.prize&&winners.length) html+=`<div style="font-size:13px;margin-top:6px;">🏆 ${state.prize}</div>`;
-    html+=`</div>`;
+    if(winners.length){
+      html+=buildPodium(winners, top);
+    } else {
+      html+=`<div class="winner-banner"><span class="big">Nadie ha sumado puntos aún</span></div>`;
+    }
   }
   html+='<ul class="rank">';
   // Agrupa por puntaje: los empatados comparten una sola fila/medalla.
